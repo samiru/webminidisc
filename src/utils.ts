@@ -7,16 +7,18 @@ export function sleep(ms: number) {
     });
 }
 
+export async function sleepWithProgressCallback(ms: number, cb: (perc: number) => void) {
+    let elapsedSecs = 1;
+    let interval = setInterval(() => {
+        elapsedSecs++;
+        cb(Math.min(100, ((elapsedSecs * 1000) / ms) * 100));
+    }, 1000);
+    await sleep(ms);
+    window.clearInterval(interval);
+}
+
 export function useShallowEqualSelector<TState = RootState, TSelected = unknown>(selector: (state: TState) => TSelected): TSelected {
     return useSelector(selector, shallowEqual);
-}
-
-export function hasWebUSB(): boolean {
-    return !!navigator.usb;
-}
-
-export function getWebUSB(): USB {
-    return navigator.usb;
 }
 
 export function debugEnabled() {
@@ -42,6 +44,22 @@ export function loadPreference<T>(key: string, defaultValue: T): T {
             return defaultValue;
         }
     }
+}
+
+export function getAvailableCharsForTrackTitle(trackTitles: string[]) {
+    const maxChars = 1700; // see https://www.minidisc.org/md_toc.html
+    const usedChars = trackTitles.reduce((acc, title) => {
+        return acc + title.length;
+    }, 0);
+    return maxChars - usedChars;
+}
+
+export function framesToSec(frames: number) {
+    return frames / 512;
+}
+
+export function sanitizeTitle(title: string) {
+    return title.normalize('NFD').replace(/[^\x00-\x7F]/g, '');
 }
 
 declare let process: any;

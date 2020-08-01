@@ -9,6 +9,7 @@ import { makeStyles, createMuiTheme, ThemeProvider } from '@material-ui/core/sty
 
 import { Welcome } from './welcome';
 import { Main } from './main';
+import { Controls } from './controls';
 import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
 import Link from '@material-ui/core/Link';
@@ -26,6 +27,9 @@ const useStyles = makeStyles(theme => ({
             marginLeft: 'auto',
             marginRight: 'auto',
         },
+        [theme.breakpoints.up(700 + theme.spacing(2) * 2)]: {
+            width: 700,
+        },
     },
 
     paper: {
@@ -40,10 +44,16 @@ const useStyles = makeStyles(theme => ({
             padding: theme.spacing(3),
             height: 600,
         },
+        [theme.breakpoints.up(700 + theme.spacing(2) * 2)]: {
+            height: 700,
+        },
     },
     copyright: {
         display: 'flex',
         alignItems: 'center',
+        [theme.breakpoints.down(600 + theme.spacing(2) * 2)]: {
+            flexWrap: 'wrap',
+        },
     },
     backdrop: {
         zIndex: theme.zIndex.drawer + 1,
@@ -51,6 +61,16 @@ const useStyles = makeStyles(theme => ({
     },
     minidiscLogo: {
         width: 48,
+    },
+    controlsContainer: {
+        flex: '1 1 auto',
+        paddingLeft: theme.spacing(3),
+        paddingRight: theme.spacing(8),
+        [theme.breakpoints.down(600 + theme.spacing(2) * 2)]: {
+            order: -1,
+            width: '100%',
+            paddingLeft: 0,
+        },
     },
 }));
 
@@ -100,18 +120,7 @@ const App = () => {
                                 {new Date().getFullYear()}
                                 {'.'}
                             </Typography>
-                            <Link
-                                rel="noopener noreferrer"
-                                href="https://twitter.com/share?ref_src=twsrc%5Etfw"
-                                className="twitter-share-button"
-                                data-via="thecybercase"
-                                data-hashtags="MiniDisc"
-                                data-dnt="true"
-                                data-show-count="false"
-                            >
-                                Tweet
-                            </Link>
-                            <Box style={{ flex: '1 1 auto' }}></Box>
+                            <Box className={classes.controlsContainer}>{mainView === 'MAIN' ? <Controls /> : null}</Box>
                         </Box>
                     </Paper>
                 </main>

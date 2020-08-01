@@ -2,9 +2,10 @@ import React, { useEffect, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import clsx from 'clsx';
 import { useDropzone } from 'react-dropzone';
-import { listContent, deleteTracks } from '../redux/actions';
+import { listContent, deleteTracks, moveTrack } from '../redux/actions';
 import { actions as renameDialogActions } from '../redux/rename-dialog-feature';
 import { actions as convertDialogActions } from '../redux/convert-dialog-feature';
+import { actions as dumpDialogActions } from '../redux/dump-dialog-feature';
 
 import { formatTimeFromFrames, getTracks, Encoding } from 'netmd-js';
 
@@ -32,12 +33,17 @@ import { batchActions } from 'redux-batched-actions';
 
 import { RenameDialog } from './rename-dialog';
 import { UploadDialog } from './upload-dialog';
+import { RecordDialog } from './record-dialog';
 import { ErrorDialog } from './error-dialog';
 import { ConvertDialog } from './convert-dialog';
 import { AboutDialog } from './about-dialog';
+import { DumpDialog } from './dump-dialog';
 import { TopMenu } from './topmenu';
 import Checkbox from '@material-ui/core/Checkbox';
 import * as BadgeImpl from '@material-ui/core/Badge/Badge';
+import Button from '@material-ui/core/Button';
+import Menu from '@material-ui/core/Menu';
+import MenuItem from '@material-ui/core/MenuItem';
 
 const useStyles = makeStyles(theme => ({
     add: {
@@ -96,9 +102,18 @@ const useStyles = makeStyles(theme => ({
         textOverflow: 'ellipsis',
         // whiteSpace: 'nowrap',
     },
+    indexCell: {
+        whiteSpace: 'nowrap',
+        paddingRight: 0,
+        width: `2ch`,
+    },
     backdrop: {
         zIndex: theme.zIndex.drawer + 1,
         color: '#fff',
+    },
+    remainingTimeTooltip: {
+        textDecoration: 'underline',
+        textDecorationStyle: 'dotted',
     },
 }));
 
@@ -115,6 +130,25 @@ export const Main = (props: {}) => {
 
     const [selected, setSelected] = React.useState<number[]>([]);
     const selectedCount = selected.length;
+
+    const [moveMenuAnchorEl, setMoveMenuAnchorEl] = React.useState<null | HTMLElement>(null);
+    const handleShowMoveMenu = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+        setMoveMenuAnchorEl(event.currentTarget);
+    }, []);
+    const handleCloseMoveMenu = useCallback(() => {
+        setMoveMenuAnchorEl(null);
+    }, []);
+    const handleMoveSelectedTrack = useCallback(
+        (destIndex: number) => {
+            dispatch(moveTrack(selected[0], destIndex));
+            handleCloseMoveMenu();
+        },
+        [dispatch, selected, handleCloseMoveMenu]
+    );
+
+    const handleShowDumpDialog = useCallback(() => {
+        dispatch(dumpDialogActions.setVisible(true));
+    }, [dispatch]);
 
     useEffect(() => {
         dispatch(listContent());
@@ -150,6 +184,7 @@ export const Main = (props: {}) => {
             }
         }
     }
+    tracks.sort((l, r) => l.index - r.index);
 
     // Action Handlers
     const handleSelectClick = (event: React.MouseEvent, item: number) => {
@@ -198,9 +233,25 @@ export const Main = (props: {}) => {
                 <TopMenu />
             </Box>
             <Typography component="h2" variant="body2">
-                {disc !== null
-                    ? `${formatTimeFromFrames(disc.left, false)} left of ${formatTimeFromFrames(disc.total, false)}`
-                    : `Loading...`}
+                {disc !== null ? (
+                    <React.Fragment>
+                        <span>{`${formatTimeFromFrames(disc.left, false)} left of ${formatTimeFromFrames(disc.total, false)} `}</span>
+                        <Tooltip
+                            title={
+                                <React.Fragment>
+                                    <span>{`${formatTimeFromFrames(disc.left * 2, false)} left in LP2 Mode`}</span>
+                                    <br />
+                                    <span>{`${formatTimeFromFrames(disc.left * 4, false)} left in LP4 Mode`}</span>
+                                </React.Fragment>
+                            }
+                            arrow
+                        >
+                            <span className={classes.remainingTimeTooltip}>SP Mode</span>
+                        </Tooltip>
+                    </React.Fragment>
+                ) : (
+                    `Loading...`
+                )}
             </Typography>
             <Toolbar
                 className={clsx(classes.toolbar, {
@@ -224,6 +275,46 @@ export const Main = (props: {}) => {
                         {disc?.title || `Untitled Disc`}
                     </Typography>
                 )}
+                {selectedCount === 1 ? (
+                    <React.Fragment>
+                        <Tooltip title="Move to Position">
+                            <Button aria-controls="move-menu" aria-label="Move" onClick={handleShowMoveMenu}>
+                                Move
+                            </Button>
+                        </Tooltip>
+                        <Menu
+                            id="move-menu"
+                            anchorEl={moveMenuAnchorEl}
+                            open={!!moveMenuAnchorEl}
+                            onClose={handleCloseMoveMenu}
+                            PaperProps={{
+                                style: {
+                                    maxHeight: 300,
+                                },
+                            }}
+                        >
+                            {Array(tracks.length)
+                                .fill(null)
+                                .map((_, i) => {
+                                    return (
+                                        <MenuItem key={`pos-${i}`} onClick={() => handleMoveSelectedTrack(i)}>
+                                            {i + 1}
+                                        </MenuItem>
+                                    );
+                                })}
+                        </Menu>
+                    </React.Fragment>
+                ) : null}
+
+                {selectedCount > 0 ? (
+                    <React.Fragment>
+                        <Tooltip title="Record from MD">
+                            <Button aria-label="Record" onClick={handleShowDumpDialog}>
+                                Record
+                            </Button>
+                        </Tooltip>
+                    </React.Fragment>
+                ) : null}
 
                 {selectedCount > 0 ? (
                     <Tooltip title="Delete">
@@ -246,6 +337,7 @@ export const Main = (props: {}) => {
                 <Table size="small">
                     <TableHead>
                         <TableRow>
+                            <TableCell className={classes.indexCell}>#</TableCell>
                             <TableCell>Title</TableCell>
                             <TableCell>Format</TableCell>
                             <TableCell align="right">Duration</TableCell>
@@ -260,6 +352,7 @@ export const Main = (props: {}) => {
                                 onDoubleClick={event => handleRenameDoubleClick(event, track.index)}
                                 onClick={event => handleSelectClick(event, track.index)}
                             >
+                                <TableCell className={classes.indexCell}>{track.index + 1}</TableCell>
                                 <TableCell className={classes.titleCell} title={track.title}>
                                     {track.title || `No Title`}
                                 </TableCell>
@@ -283,6 +376,8 @@ export const Main = (props: {}) => {
             <RenameDialog />
             <ErrorDialog />
             <ConvertDialog files={uploadedFiles} />
+            <RecordDialog />
+            <DumpDialog trackIndexes={selected} />
             <AboutDialog />
         </React.Fragment>
     );

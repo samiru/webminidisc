@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
 import * as serviceWorker from './serviceWorker';
 import { NetMDUSBService } from './services/netmd';
+import { NetMDMockService } from './services/netmd-mock';
 import serviceRegistry from './services/registry';
 
 import { store } from './redux/store';
@@ -13,9 +14,12 @@ import App from './components/app';
 
 import './index.css';
 import { FFMpegAudioExportService } from './services/audio-export';
+import { MediaRecorderService } from './services/mediarecorder';
 
-serviceRegistry.netmdService = new NetMDUSBService();
+serviceRegistry.netmdService = new NetMDUSBService({ debug: true });
+// serviceRegistry.netmdService = new NetMDMockService(); // Uncomment to work without a device attached
 serviceRegistry.audioExportService = new FFMpegAudioExportService();
+serviceRegistry.mediaRecorderService = new MediaRecorderService();
 
 (function setupEventHandlers() {
     window.addEventListener('beforeunload', ev => {
